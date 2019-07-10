@@ -180,9 +180,15 @@ protected:
       LocalityHealthyHosts,
       // Degraded hosts for locality @ locality_index.
       LocalityDegradedHosts,
+      // No hosts in the host set.
+      NoHosts,
     };
 
     HostsSource() {}
+
+    HostsSource(SourceType source_type) : source_type_(source_type) {
+        ASSERT(source_type == SourceType::NoHosts);
+    }
 
     HostsSource(uint32_t priority, SourceType source_type)
         : priority_(priority), source_type_(source_type) {
@@ -230,6 +236,8 @@ protected:
    * Index into priority_set via hosts source descriptor.
    */
   const HostVector& hostSourceToHosts(HostsSource hosts_source);
+
+  const HostVector dummy_empty_host_vector;
 
 private:
   enum class LocalityRoutingState {

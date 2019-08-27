@@ -222,12 +222,22 @@ DetectorConfig::DetectorConfig(const envoy::api::v2::cluster::OutlierDetection& 
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, success_rate_request_volume, 100))),
       success_rate_stdev_factor_(static_cast<uint64_t>(
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, success_rate_stdev_factor, 1900))),
+      failure_percentage_threshold_(static_cast<uint64_t>(
+          PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, failure_percentage_threshold, 85))),
+      failure_percentage_minimum_hosts_(static_cast<uint64_t>(
+          PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, failure_percentage_minimum_hosts, 5))),
+      failure_percentage_request_volume_(static_cast<uint64_t>(
+          PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, failure_percentage_request_volume, 50))),
       enforcing_consecutive_5xx_(static_cast<uint64_t>(
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, enforcing_consecutive_5xx, 100))),
       enforcing_consecutive_gateway_failure_(static_cast<uint64_t>(
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, enforcing_consecutive_gateway_failure, 0))),
       enforcing_success_rate_(static_cast<uint64_t>(
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, enforcing_success_rate, 100))),
+      enforcing_failure_percentage_(static_cast<uint64_t>(
+          PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, enforcing_failure_percentage, 0))),
+      enforcing_failure_percentage_local_origin_(static_cast<uint64_t>(
+          PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, enforcing_failure_percentage_local_origin, 0))),
       split_external_local_origin_errors_(config.split_external_local_origin_errors()),
       consecutive_local_origin_failure_(static_cast<uint64_t>(
           PROTOBUF_GET_WRAPPED_OR_DEFAULT(config, consecutive_local_origin_failure, 5))),

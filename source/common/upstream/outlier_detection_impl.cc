@@ -639,6 +639,61 @@ void DetectorImpl::processSuccessRateEjections(
   }
 }
 
+void DetectorImpl::processFailurePercentageEjections(
+    DetectorHostMonitor::SuccessRateMonitorType monitor_type) {
+  uint64_t failure_percentage_minimum_hosts = runtime_.snapshot().getInteger(
+      "outlier_detection.failure_percentage_minimum_hosts",
+      config_.failurePercentageMinimumHosts());
+  uint64_t failure_percentage_request_volume = runtime_.snapshot().getInteger(
+      "outlier_detection.failure_percentage_request_volume",
+      config_.failurePercentageRequestVolume());
+  std::vector<HostSuccessRatePair> valid_failure_percentage_hosts;
+
+  // Exit early if there are not enough hosts.
+  if (host_monitors_.size() < failure_percentage_minimum_hosts) {
+    return;
+  }
+
+  // reserve upper bound of vector size to avoid reallocation.
+  valid_failure_percentage_hosts.reserve(host_monitors_.size());
+
+  for (const auto& host : host_monitors_) {
+    if (!host.first->healthFlagGet(Host::HealthFlag::FAILED_OUTLIER_CHECK)) {
+      absl::optional<double> host_success_rate = host.second->getSRMonitor(monitor_type)
+                                                     .successRateAccumulator()
+                                                     .getSuccessRate(failure_percentage_request_volume);
+
+      if (host_success_rate) {
+        valid_failure_percentage_hosts.emplace_back(
+            HostSuccessRatePair(host.first, host_success_rate.value()));
+      }
+    }
+  }
+
+  if (!valid_failure_percentage_hosts.empty() &&
+      valid_failure_percentage_hosts.size() >= failure_percentage_minimum_hosts) {
+    const double failure_percentage_threshold =
+      runtime_.snapshot().getInteger("outlier_detection.failure_percentage_threshold",
+                                     config_.failurePercentageThreshold()) /
+      100.0;
+
+    for (const auto& host_success_rate_pair : valid_failure_percentage_hosts) {
+      if ((100.0 - host_success_rate_pair.success_rate_) >= failure_percentage_threshold) {
+        // We should eject.
+
+        // The ejection type returned by the SuccessRateMonitor's getEjectionType() will be a
+        // SUCCESS_RATE type, so we need to figure it out for ourselves.
+        const envoy::data::cluster::v2alpha::OutlierEjectionType type =
+          (monitor_type == DetectorHostMonitor::SuccessRateMonitorType::ExternalOrigin)
+            ? envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE
+            : envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE_LOCAL_ORIGIN;
+        updateDetectedEjectionStats(type);
+        ejectHost(host_success_rate_pair.host_, type);
+      }
+    }
+  }
+}
+
 void DetectorImpl::onIntervalTimer() {
   MonotonicTime now = time_source_.monotonicTime();
 
@@ -655,6 +710,9 @@ void DetectorImpl::onIntervalTimer() {
 
   processSuccessRateEjections(DetectorHostMonitor::SuccessRateMonitorType::ExternalOrigin);
   processSuccessRateEjections(DetectorHostMonitor::SuccessRateMonitorType::LocalOrigin);
+
+  processFailurePercentageEjections(DetectorHostMonitor::SuccessRateMonitorType::ExternalOrigin);
+  processFailurePercentageEjections(DetectorHostMonitor::SuccessRateMonitorType::LocalOrigin);
 
   armIntervalTimer();
 }

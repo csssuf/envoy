@@ -364,6 +364,7 @@ private:
   void updateEnforcedEjectionStats(envoy::data::cluster::v2alpha::OutlierEjectionType type);
   void updateDetectedEjectionStats(envoy::data::cluster::v2alpha::OutlierEjectionType type);
   void processSuccessRateEjections(DetectorHostMonitor::SuccessRateMonitorType monitor_type);
+  void processFailurePercentageEjections(DetectorHostMonitor::SuccessRateMonitorType monitor_type);
 
   DetectorConfig config_;
   Event::Dispatcher& dispatcher_;

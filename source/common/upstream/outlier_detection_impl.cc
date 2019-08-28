@@ -365,6 +365,14 @@ bool DetectorImpl::enforceEjection(envoy::data::cluster::v2alpha::OutlierEjectio
     return runtime_.snapshot().featureEnabled(
         "outlier_detection.enforcing_local_origin_success_rate",
         config_.enforcingLocalOriginSuccessRate());
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE:
+    return runtime_.snapshot().featureEnabled(
+        "outlier_detection.enforcing_failure_percentage",
+        config_.enforcingFailurePercentage());
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE_LOCAL_ORIGIN:
+    return runtime_.snapshot().featureEnabled(
+        "outlier_detection.enforcing_failure_percentage_local_origin",
+        config_.enforcingFailurePercentageLocalOrigin());
   default:
     // Checked by schema.
     NOT_REACHED_GCOVR_EXCL_LINE;
@@ -392,6 +400,12 @@ void DetectorImpl::updateEnforcedEjectionStats(
   case envoy::data::cluster::v2alpha::OutlierEjectionType::SUCCESS_RATE_LOCAL_ORIGIN:
     stats_.ejections_enforced_local_origin_success_rate_.inc();
     break;
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE:
+    stats_.ejections_enforced_failure_percentage_.inc();
+    break;
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE_LOCAL_ORIGIN:
+    stats_.ejections_enforced_local_origin_failure_percentage_.inc();
+    break;
   default:
     // Checked by schema.
     NOT_REACHED_GCOVR_EXCL_LINE;
@@ -415,6 +429,12 @@ void DetectorImpl::updateDetectedEjectionStats(
     break;
   case envoy::data::cluster::v2alpha::OutlierEjectionType::SUCCESS_RATE_LOCAL_ORIGIN:
     stats_.ejections_detected_local_origin_success_rate_.inc();
+    break;
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE:
+    stats_.ejections_detected_failure_percentage_.inc();
+    break;
+  case envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE_LOCAL_ORIGIN:
+    stats_.ejections_detected_local_origin_failure_percentage_.inc();
     break;
   default:
     // Checked by schema.
@@ -669,6 +689,14 @@ void EventLoggerImpl::logEject(const HostDescriptionConstSharedPtr& host, Detect
     event.mutable_eject_success_rate_event()->set_cluster_success_rate_ejection_threshold(
         detector.successRateEjectionThreshold(monitor_type));
     event.mutable_eject_success_rate_event()->set_host_success_rate(
+        host->outlierDetector().successRate(monitor_type));
+  } else if ((type == envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE) ||
+             (type == envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE_LOCAL_ORIGIN)) {
+    const DetectorHostMonitor::SuccessRateMonitorType monitor_type =
+        (type == envoy::data::cluster::v2alpha::OutlierEjectionType::FAILURE_PERCENTAGE)
+            ? DetectorHostMonitor::SuccessRateMonitorType::ExternalOrigin
+            : DetectorHostMonitor::SuccessRateMonitorType::LocalOrigin;
+    event.mutable_eject_failure_percentage_event()->set_host_success_rate(
         host->outlierDetector().successRate(monitor_type));
   } else {
     event.mutable_eject_consecutive_event();
